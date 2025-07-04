@@ -1,10 +1,15 @@
 import DAO.EmployeeDAO;
 import DAO.EmployeeDAOImpl;
+import DAO.ProductDAO;
+import DAO.ProductDAOImpl;
 import Entity.Employee;
+import Entity.Product;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.time.format.DateTimeFormatter;
+import java.util.Date;
 import java.util.Scanner;
 
 public class NystoreMain {
@@ -17,6 +22,7 @@ public class NystoreMain {
 
             Scanner scanner = new Scanner(System.in);
             EmployeeDAO employeeDAO = new EmployeeDAOImpl(conn);
+            ProductDAO productDAO = new ProductDAOImpl(conn);
             Employee currentEmployee = null;    // 현재 로그인한 사원 정보
             boolean run = true;
 
@@ -53,9 +59,87 @@ public class NystoreMain {
                     }
                 } else {       // 현재 로그인한 사원이 있을 경우. 즉, 로그인 상태
                     showMainMenu();
-                    String menuInput = scanner.nextLine();
+                    String menuInput = scanner.nextLine().trim();
+                    switch (menuInput) {
+                        case "1": // 제품 입력
+                            Product newProduct = new Product();
+
+                            System.out.print("제품명: ");
+                            String name = scanner.nextLine().trim();
+                            while (name.isBlank()) {
+                                System.out.print("제품명은 필수입니다. 다시 입력: ");
+                                name = scanner.nextLine().trim();
+                            }
+
+                            System.out.print("제조회사: ");
+                            String company = scanner.nextLine().trim();
+                            while (company.isBlank()) {
+                                System.out.print("제조회사는 필수입니다. 다시 입력: ");
+                                company = scanner.nextLine().trim();
+                            }
+
+                            System.out.print("가격: ");
+                            int price = 0;
+                            while (true) {
+                                try {
+                                    price = Integer.parseInt(scanner.nextLine().trim());
+                                    if (price <= 0) throw new NumberFormatException();
+                                    break;
+                                } catch (NumberFormatException e) {
+                                    System.out.print("가격은 0보다 큰 숫자여야 합니다. 다시 입력: ");
+                                }
+                            }
+
+                            System.out.print("19금 물품 여부 (Y/N): ");
+                            char adult;
+                            while (true) {
+                                String adultInput = scanner.nextLine().trim().toUpperCase();
+                                if (adultInput.equals("Y") || adultInput.equals("N")) {
+                                    adult = adultInput.charAt(0);
+                                    break;
+                                } else {
+                                    System.out.print("Y 또는 N 중 하나를 입력하세요: ");
+                                }
+                            }
+
+                            Date expDate = null;
+                            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                            sdf.setLenient(false);
+                            while (true) {
+                                System.out.print("유통기한 (yyyy-MM-dd, 없으면 enter): ");
+                                String expStr = scanner.nextLine().trim();
+                                if (expStr.isBlank()) {
+                                    break;
+                                }
+                                try {
+                                    expDate = sdf.parse(expStr);
+                                    break;
+                                } catch (Exception e) {
+                                    System.out.println("날짜 형식이 잘못되었습니다. 예: 2025-12-31");
+                                }
+                            }
+
+                            newProduct.setPrdName(name);
+                            newProduct.setPrdCompany(company);
+                            newProduct.setPrdPrice(price);
+                            newProduct.setPrdAdult(adult);
+                            newProduct.setPrdExp(expDate);
+
+                            productDAO.insertProduct(newProduct);
+                            System.out.println("\u001B[34m✅ 제품 등록 완료!\u001B[0m");
+                            break;
+
+                        case "0":
+                            System.out.println("프로그램 종료");
+                            run = false;
+                            break;
+
+                        default:
+                            System.out.println("메뉴를 다시 선택하세요.");
+                    }
                 }
             }
+
         } catch (SQLException e) {
             System.out.println("DB 연결 중 오류 발생");
         }
@@ -71,7 +155,7 @@ public class NystoreMain {
     public static void showMainMenu() {
         System.out.println("===== 메인 메뉴 =====");
         System.out.println("1. 제품 입력");
-        System.out.println("2. 제품 확인");
+        System.out.println("2. 제품(재고) 확인");
         System.out.println("3. 물품 입고");
         System.out.println("4. 계산");
         System.out.println("5. 매출 확인");
