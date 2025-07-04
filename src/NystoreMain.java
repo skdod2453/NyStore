@@ -1,15 +1,15 @@
-import DAO.EmployeeDAO;
-import DAO.EmployeeDAOImpl;
-import DAO.ProductDAO;
-import DAO.ProductDAOImpl;
+import DAO.*;
 import Entity.Employee;
 import Entity.Product;
+import Entity.Stock;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
+import java.util.List;
+import java.util.Random;
 import java.util.Scanner;
 
 public class NystoreMain {
@@ -23,6 +23,8 @@ public class NystoreMain {
             Scanner scanner = new Scanner(System.in);
             EmployeeDAO employeeDAO = new EmployeeDAOImpl(conn);
             ProductDAO productDAO = new ProductDAOImpl(conn);
+            StockDAO stockDAO = new StockDAOImpl(conn);
+
             Employee currentEmployee = null;    // 현재 로그인한 사원 정보
             boolean run = true;
 
@@ -125,8 +127,62 @@ public class NystoreMain {
                             newProduct.setPrdAdult(adult);
                             newProduct.setPrdExp(expDate);
 
+                            newProduct.setPrdStock(10);
+
                             productDAO.insertProduct(newProduct);
                             System.out.println("\u001B[34m✅ 제품 등록 완료!\u001B[0m");
+                            break;
+
+                        case "2":
+                            List<Product> products = productDAO.getAllProducts();
+                            if (products.isEmpty()) {
+                                System.out.println("등록된 제품이 없습니다.");
+                            } else {
+                                System.out.println("=== 제품 리스트 및 재고 ===");
+                                for (Product p : products) {
+                                    String stars = "*".repeat(Math.min(p.getPrdStock(), 20)); // 재고 개수만큼 * (최대 20개까지만 표시)
+                                    System.out.printf("%s : %s %d개\n", p.getPrdName(), stars, p.getPrdStock());
+                                }
+                            }
+                            break;
+
+                        case "3":
+                            List<Product> allProducts = productDAO.getAllProducts();
+                            if (allProducts.isEmpty()) {
+                                System.out.println("입고할 제품이 없습니다. 제품을 먼저 등록하세요.");
+                                break;
+                            }
+
+                            Random random = new Random();
+                            Product randomProduct = allProducts.get(random.nextInt(allProducts.size()));
+                            System.out.println("입고 제품: " + randomProduct.getPrdName());
+
+                            int quantity = 0;
+                            while (true) {
+                                System.out.print("입고 수량을 입력하세요: ");
+                                try {
+                                    quantity = Integer.parseInt(scanner.nextLine().trim());
+                                    if (quantity <= 0) {
+                                        System.out.println("수량은 0보다 커야 합니다.");
+                                        continue;
+                                    }
+                                    break;
+                                } catch (NumberFormatException e) {
+                                    System.out.println("숫자만 입력하세요.");
+                                }
+                            }
+
+                            Stock stock = new Stock();
+                            stock.setPrdId(randomProduct.getPrdId());
+                            stock.setQuantity(quantity);
+                            stock.setUpdateEmp(currentEmployee.getEmpId());
+
+                            stockDAO.insertStock(stock);
+
+                            int updatedStock = randomProduct.getPrdStock() + quantity;
+                            productDAO.updateProduct(randomProduct.getPrdId(), updatedStock);
+
+                            System.out.println("입고 완료! 현재 재고: " + updatedStock);
                             break;
 
                         case "0":

@@ -46,6 +46,7 @@ public class ProductDAOImpl implements ProductDAO {
                 p.setPrdAdult(rs.getString("PRDADULT").charAt(0));
                 p.setPrdStock(rs.getInt("PRDSTOCK"));
                 p.setPrdExp(rs.getDate("PRDEXP"));
+                products.add(p);
             }
         } catch (SQLException e) {
             System.out.printf("%s\r\n", "상품 목록 조회 중 오류 발생");
