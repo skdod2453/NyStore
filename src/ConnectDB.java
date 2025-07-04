@@ -20,6 +20,7 @@ public class ConnectDB {
             connection = DriverManager.getConnection(url, user, password);
             System.out.printf("%s\r\n", connection);
             System.out.printf("%s\r\n", "연결 성공");
+
         } catch (ClassNotFoundException e) {
             System.out.printf("%s\r\n", "jdbc11.jar 없습니다.");
         } catch (SQLException e) {
@@ -27,6 +28,6 @@ public class ConnectDB {
         } catch (IOException e) {
             System.out.printf("%s\r\n", "DB 설정 파일 읽어오기 실패");
         }
-        return null;
+        return connection;
         }
 }
