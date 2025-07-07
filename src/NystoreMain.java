@@ -26,6 +26,7 @@ public class NystoreMain {
             ProductDAO productDAO = new ProductDAOImpl(conn);
             StockDAO stockDAO = new StockDAOImpl(conn);
             SalesDAO salesDAO = new SalesDAOImpl(conn);
+            WorksDAO worksDAO = new WorksDAOImpl(conn);
 
             Employee currentEmployee = null;    // 현재 로그인한 사원 정보
             boolean run = true;
@@ -48,6 +49,8 @@ public class NystoreMain {
                             } else {
                                 currentEmployee = loginEmployee;
                                 employeeDAO.updateLoginTime(empID);
+                                worksDAO.insertLoginRecord(empID);
+
                                 currentEmployee = employeeDAO.findByIdAndPassword(empID, empPw);
                                 System.out.println("\u001B[32m" + currentEmployee.getEmpName() + "님 안녕하세요!\u001B[0m");
                                 System.out.println("로그인 시간 : " + currentEmployee.getLoginDate().toLocalDateTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
@@ -290,8 +293,15 @@ public class NystoreMain {
                             }
                             break;
 
+                        case "6":
+                            System.out.println("로그아웃합니다...");
+                            worksDAO.updateLogoutRecord(currentEmployee.getEmpId());
+                            currentEmployee = null;
+                            break;
+
                         case "0":
                             System.out.println("프로그램 종료");
+                            worksDAO.updateLogoutRecord(currentEmployee.getEmpId());
                             run = false;
                             break;
 
