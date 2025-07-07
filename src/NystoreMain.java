@@ -1,6 +1,7 @@
 import DAO.*;
 import Entity.Employee;
 import Entity.Product;
+import Entity.Sales;
 import Entity.Stock;
 
 import java.sql.Connection;
@@ -24,6 +25,7 @@ public class NystoreMain {
             EmployeeDAO employeeDAO = new EmployeeDAOImpl(conn);
             ProductDAO productDAO = new ProductDAOImpl(conn);
             StockDAO stockDAO = new StockDAOImpl(conn);
+            SalesDAO salesDAO = new SalesDAOImpl(conn);
 
             Employee currentEmployee = null;    // 현재 로그인한 사원 정보
             boolean run = true;
@@ -140,21 +142,21 @@ public class NystoreMain {
                             } else {
                                 System.out.println("=== 제품 리스트 및 재고 ===");
                                 for (Product p : products) {
-                                    String stars = "*".repeat(Math.min(p.getPrdStock(), 20)); // 재고 개수만큼 * (최대 20개까지만 표시)
+                                    String stars = "*".repeat(Math.min(p.getPrdStock(), 20));
                                     System.out.printf("%s : %s %d개\n", p.getPrdName(), stars, p.getPrdStock());
                                 }
                             }
                             break;
 
                         case "3":
-                            List<Product> allProducts = productDAO.getAllProducts();
-                            if (allProducts.isEmpty()) {
+                            List<Product> stockProducts = productDAO.getAllProducts();
+                            if (stockProducts.isEmpty()) {
                                 System.out.println("입고할 제품이 없습니다. 제품을 먼저 등록하세요.");
                                 break;
                             }
 
                             Random random = new Random();
-                            Product randomProduct = allProducts.get(random.nextInt(allProducts.size()));
+                            Product randomProduct = stockProducts.get(random.nextInt(stockProducts.size()));
                             System.out.println("입고 제품: " + randomProduct.getPrdName());
 
                             int quantity = 0;
@@ -183,6 +185,109 @@ public class NystoreMain {
                             productDAO.updateProduct(randomProduct.getPrdId(), updatedStock);
 
                             System.out.println("입고 완료! 현재 재고: " + updatedStock);
+                            break;
+
+                        case "4": // 계산
+                            List<Product> purchaseProducts = productDAO.getAllProducts();
+
+                            if (purchaseProducts.isEmpty()) {
+                                System.out.println("등록된 제품이 없습니다.");
+                                break;
+                            }
+
+                            System.out.println("구매 가능한 제품 목록:");
+                            for (Product p : purchaseProducts) {
+                                System.out.printf("ID: %d | %s | 가격: %d원 | 재고: %d개 | 19금: %s\n",
+                                        p.getPrdId(), p.getPrdName(), p.getPrdPrice(), p.getPrdStock(), p.getPrdAdult());
+                            }
+
+                            System.out.print("구매할 제품 ID를 입력하세요: ");
+                            int selectedId = Integer.parseInt(scanner.nextLine().trim());
+                            Product selectedProduct = productDAO.getProductById(selectedId);
+
+                            if (selectedProduct == null) {
+                                System.out.println("해당 ID의 제품이 없습니다.");
+                                break;
+                            }
+
+                            System.out.print("수량을 입력하세요: ");
+                            int qty = Integer.parseInt(scanner.nextLine().trim());
+
+                            if (selectedProduct.getPrdStock() < qty) {
+                                System.out.println("재고가 부족합니다.");
+                                break;
+                            }
+
+                            // 19금 확인
+                            if (selectedProduct.getPrdAdult() == 'Y') {
+                                System.out.print("이 상품은 19금입니다. 주민번호 앞자리를 입력하세요 (6자리): ");
+                                String rrn = scanner.nextLine().trim();
+                                if (rrn.length() != 6) {
+                                    System.out.println("입력이 올바르지 않습니다.");
+                                    break;
+                                }
+                                int birthYear = Integer.parseInt(rrn.substring(0, 2));
+                                int age = 2025 - (birthYear + 1900); // 대략 계산
+                                if (age < 19) {
+                                    System.out.println("19세 미만은 구매할 수 없습니다.");
+                                    break;
+                                }
+                            }
+
+                            int total = selectedProduct.getPrdPrice() * qty;
+                            System.out.printf("총 금액은 %d원입니다.\n", total);
+                            System.out.print("결제 수단을 선택하세요 (CARD/CASH): ");
+                            String method = scanner.nextLine().trim().toUpperCase();
+
+                            Sales sale = new Sales();
+                            sale.setPrdId(selectedId);
+                            sale.setQuantity(qty);
+                            sale.setTotalPrice(total);
+                            sale.setPayment(method);
+                            sale.setSoldEmp(currentEmployee.getEmpId());
+
+                            if (method.equals("CARD")) {
+                                System.out.print("카드 번호 입력: ");
+                                String card = scanner.nextLine().trim();
+                                sale.setCardNum(card);
+                            } else if (method.equals("CASH")) {
+                                System.out.print("현금 입력: ");
+                                int cash = Integer.parseInt(scanner.nextLine().trim());
+                                if (cash < total) {
+                                    System.out.println("현금이 부족합니다.");
+                                    break;
+                                }
+                                sale.setCash(cash);
+                                sale.setCashChange(cash - total);
+                            } else {
+                                System.out.println("잘못된 결제 수단입니다.");
+                                break;
+                            }
+
+                            // 매출 등록
+                            salesDAO.insertSale(sale);
+
+                            // 재고 차감
+                            productDAO.updateProduct(selectedId, selectedProduct.getPrdStock() - qty);
+
+                            System.out.println("\u001B[34m✅ 결제가 완료되었습니다. 감사합니다!\u001B[0m");
+                            break;
+
+                        case "5":  // 매출 확인
+                            System.out.print("조회할 날짜 입력 (yyyy-MM-dd): ");
+                            String date = scanner.nextLine().trim();
+
+                            List<Sales> salesList = salesDAO.getSalesByDate(date);
+                            if (salesList.isEmpty()) {
+                                System.out.println("해당 날짜에 매출이 없습니다.");
+                            } else {
+                                System.out.println("매출 내역:");
+                                for (Sales s : salesList) {
+                                    System.out.printf("판매ID: %d, 제품ID: %d, 수량: %d, 총가격: %d, 결제수단: %s, 판매직원: %s, 판매시간: %s\n",
+                                            s.getSalesId(), s.getPrdId(), s.getQuantity(), s.getTotalPrice(), s.getPayment(), s.getSoldEmp(),
+                                            new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(s.getSaleDate()));
+                                }
+                            }
                             break;
 
                         case "0":
