@@ -15,7 +15,7 @@ public class SalesDAOImpl implements SalesDAO {
 
     @Override
     public void insertSale(Sales sale) {
-        String sql = "INSERT INTO SALES (PRDID, QUANTITY, TOTALPRICE, PAYMENT, CARDNUM, CASH, CASHCHANGE, SOULEMP) " +
+        String sql = "INSERT INTO SALES (PRDID, QUANTITY, TOTALPRICE, PAYMENT, CARDNUM, CASH, CASHCHANGE, SOLDEMP) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, sale.getPrdId());
@@ -63,7 +63,7 @@ public class SalesDAOImpl implements SalesDAO {
                     s.setCardNum(rs.getString("CARDNUM"));
                     s.setCash(rs.getInt("CASH"));
                     s.setCashChange(rs.getInt("CASHCHANGE"));
-                    s.setSoldEmp(rs.getString("SOULEMP"));
+                    s.setSoldEmp(rs.getString("SOLDEMP"));
                     salesList.add(s);
                 }
             }

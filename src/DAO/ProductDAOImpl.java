@@ -106,4 +106,28 @@ public class ProductDAOImpl implements ProductDAO {
             System.out.printf("%s\r\n", "제품 삭제 중 오류 발생");
         }
     }
+
+    public List<Product> searchProductsByName(String keyword) {
+        List<Product> result = new ArrayList<>();
+        String sql = "SELECT * FROM PRODUCT WHERE PRDNAME LIKE ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, "%" + keyword + "%");
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) {
+                Product p = new Product();
+                p.setPrdId(rs.getInt("PRDID"));
+                p.setPrdName(rs.getString("PRDNAME"));
+                p.setPrdCompany(rs.getString("PRDCOMPANY"));
+                p.setPrdAdult(rs.getString("PRDADULT").charAt(0));
+                p.setPrdPrice(rs.getInt("PRDPRICE"));
+                p.setPrdStock(rs.getInt("PRDSTOCK"));
+                p.setPrdExp(rs.getDate("PRDEXP"));
+                result.add(p);
+            }
+        } catch (SQLException e) {
+            System.out.println("제품 검색 오류: " + e.getMessage());
+        }
+        return result;
+    }
+
 }

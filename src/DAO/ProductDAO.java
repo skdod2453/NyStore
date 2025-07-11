@@ -9,4 +9,6 @@ public interface ProductDAO {
     Product getProductById(int prdId);
     void updateProduct(int prdId, int newStock);
     void deleteProduct(int prdId);
+
+    List<Product> searchProductsByName(String keyword);
 }
